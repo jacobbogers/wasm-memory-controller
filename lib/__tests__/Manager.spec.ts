@@ -1,0 +1,3 @@
+describe("manager", () => {
+	it("hello", () => {});
+});
