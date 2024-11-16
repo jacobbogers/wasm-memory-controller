@@ -41,6 +41,16 @@ export default class Manager {
 		this.#lastError = error;
 	}
 
+	public get regions() {
+		return this.#regions.map((r) => {
+			return {
+				id: r.id,
+				offset: r.offset,
+				len: r.len,
+			};
+		});
+	}
+
 	public getLatestError() {
 		return this.#lastError;
 	}
@@ -53,7 +63,8 @@ export default class Manager {
 			this.#heap.buffer.byteLength - 4 - REGION_ENTRY_SIZE * (regionCount + 1);
 		// at this point we have determined the lowest point in the metadata array
 		// but do we have a large enough chunk somewhere equal to requesteed "octetSize"
-		for (const region of this.#regions) {
+		for (let i = 0; i < this.#regions.length; i++) {
+			const region = this.#regions[i];
 			const avail = region.offset - start;
 			if (avail >= octetSize) {
 				// claim the region
@@ -69,9 +80,10 @@ export default class Manager {
 				this.#regions.push(rg);
 				this.#regions.sort(sortRegions);
 				this.setLatestError(null);
+				this.#regionCount.setUint32(0, regionCount + 1, true);
 				return rg;
 			}
-			start = region.offset + region.length;
+			start = region.offset + region.len;
 		}
 		// so there is no whole between regions large enough for octetSize, so we need to add new
 		if (offsetEntry - start >= octetSize) {
@@ -88,12 +100,14 @@ export default class Manager {
 			this.#regions.push(rg);
 			this.#regions.sort(sortRegions);
 			this.setLatestError(null);
+			this.#regionCount.setUint32(0, regionCount + 1, true);
 			return rg;
 		}
 		this.setLatestError(new WasmMemoryError(1, formatError(1, octetSize)));
 		return null;
 	}
 	public freeViaRegionId(id16Bit: number): null | Region {
+		const regionCount = this.#regionCount.getUint32(0, true);
 		for (let i = 0; i < this.#regions.length; i++) {
 			const region = this.#regions[i];
 			if (region.id === id16Bit) {
@@ -103,9 +117,15 @@ export default class Manager {
 					4 -
 					REGION_ENTRY_SIZE * this.#regions.length;
 				const target = source + REGION_ENTRY_SIZE;
-				this.#byteWrapper.copyWithin(target, source, sizeToMove);
-				this.#byteWrapper.fill(0, source, source + REGION_ENTRY_SIZE);
 				const region = this.#regions.splice(i, 1)[0];
+				if (sizeToMove) {
+					this.#byteWrapper.copyWithin(target, source, sizeToMove);
+					this.#byteWrapper.fill(0, source, source + REGION_ENTRY_SIZE);
+				} else {
+					// you are here because it was the last entry in the "list"
+					region.clearEntry();
+				}
+				this.#regionCount.setUint32(0, regionCount - 1, true);
 				return region;
 			}
 		}

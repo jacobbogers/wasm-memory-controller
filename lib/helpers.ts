@@ -3,7 +3,7 @@ import type Region from "./Region";
 
 export function sortRegions(a: Region, b: Region): number {
 	// higher offsets at the start
-	return b.compareTo(a);
+	return a.compareTo(b);
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
