@@ -5,6 +5,7 @@ import { sortRegions, formatError } from "./helpers";
 
 export default class Manager {
 	#heap: WebAssembly.Memory;
+	#byteWrapper: Uint8Array;
 	#regions: Region[];
 	#regionCount: DataView;
 	#lastError: WasmMemoryError | null;
@@ -12,6 +13,7 @@ export default class Manager {
 	constructor(heap: WebAssembly.Memory) {
 		this.#lastError = null;
 		this.#heap = heap;
+		this.#byteWrapper = new Uint8Array(heap.buffer);
 		this.#regions = [];
 		this.#regionCount = new DataView(
 			this.#heap.buffer,
@@ -39,11 +41,11 @@ export default class Manager {
 		this.#lastError = error;
 	}
 
-	getLatestError() {
+	public getLatestError() {
 		return this.#lastError;
 	}
 
-	claim(id16Bit: number, octetSize: number): Region | null {
+	public claim(id16Bit: number, octetSize: number): Region | null {
 		// assume the this.#regions is sorted by offset property
 		let start = 0; // start mem chuck
 		const regionCount = this.#regionCount.getUint32(0, true);
@@ -88,7 +90,25 @@ export default class Manager {
 			this.setLatestError(null);
 			return rg;
 		}
-		this.setLatestError(new WasmMemoryError(1, formatError(1)));
+		this.setLatestError(new WasmMemoryError(1, formatError(1, octetSize)));
+		return null;
+	}
+	public freeViaRegionId(id16Bit: number): null | Region {
+		for (let i = 0; i < this.#regions.length; i++) {
+			const region = this.#regions[i];
+			if (region.id === id16Bit) {
+				const sizeToMove = REGION_ENTRY_SIZE * (this.#regions.length - (i + 1));
+				const source =
+					this.#heap.buffer.byteLength -
+					4 -
+					REGION_ENTRY_SIZE * this.#regions.length;
+				const target = source + REGION_ENTRY_SIZE;
+				this.#byteWrapper.copyWithin(target, source, sizeToMove);
+				this.#byteWrapper.fill(0, source, source + REGION_ENTRY_SIZE);
+				const region = this.#regions.splice(i, 1)[0];
+				return region;
+			}
+		}
 		return null;
 	}
 }
