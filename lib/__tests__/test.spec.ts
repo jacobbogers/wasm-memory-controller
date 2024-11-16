@@ -3,6 +3,18 @@ import WasmMemoryError from "../WasmMemoryError";
 
 const KB = 1024;
 
+const fixtureSerializedMemory = new Uint8Array([
+	5, 0, 0, 176, 0, 0, 0, 16, 0, 0,
+	//
+	4, 0, 0, 160, 0, 0, 0, 16, 0, 0,
+	//
+	3, 0, 0, 64, 1, 0, 0, 160, 0, 0,
+	//
+	1, 0, 0, 0, 0, 0, 0, 160, 0, 0,
+	//
+	4, 0, 0, 0,
+]);
+
 describe("manager", () => {
 	it.concurrent("claim more memory then exist in heap", () => {
 		const heap = new WebAssembly.Memory({ initial: 2, maximum: 3 }); // 128k
@@ -136,16 +148,39 @@ describe("manager", () => {
 			]);
 		}
 	});
-	it.concurrent("resurect an formatted datablock", () => {
+	it.concurrent("serialize the metainfo of a datablock", () => {
 		const heap = new WebAssembly.Memory({ initial: 2, maximum: 3 }); // 128k
 		const mm = new Manager(heap);
-		const regionA = mm.claim(1, 40 * KB); // 50k
-		const regionB = mm.claim(2, 40 * KB); // 80k
-		const regionC = mm.claim(3, 40 * KB); // 120k
-		const regionRemoved = mm.freeViaRegionId(2);
-		const regionD = mm.claim(4, 4 * KB); // 120k
-		const regionE = mm.claim(5, 4 * KB); // 120k
+		mm.claim(1, 40 * KB); // 50k
+		mm.claim(2, 40 * KB); // 80k
+		mm.claim(3, 40 * KB); // 120k
+		mm.freeViaRegionId(2);
+		mm.claim(4, 4 * KB); // 120k
+		mm.claim(5, 4 * KB); // 120k
 		const regions = mm.regions;
-		console.log(regions);
+		expect(regions).toEqual([
+			{ id: 1, offset: 0, len: 40960 },
+			{ id: 4, offset: 40960, len: 4096 },
+			{ id: 5, offset: 45056, len: 4096 },
+			{ id: 3, offset: 81920, len: 40960 },
+		]);
+		console.log(mm.getMeta());
+		//expect(mm.getMeta()).toEqual(fixtureSerializedMemory);
+	});
+	it.concurrent("resurrect the metainfo of a datablock", () => {
+		const heap = new WebAssembly.Memory({ initial: 2, maximum: 3 }); // 128k
+		const octets = new Uint8Array(heap.buffer);
+		octets.set(
+			fixtureSerializedMemory,
+			octets.byteLength - fixtureSerializedMemory.byteLength,
+		);
+		const mm = new Manager(heap);
+		const regions = mm.regions;
+		expect(regions).toEqual([
+			{ id: 1, offset: 0, len: 40960 },
+			{ id: 4, offset: 40960, len: 4096 },
+			{ id: 5, offset: 45056, len: 4096 },
+			{ id: 3, offset: 81920, len: 40960 },
+		]);
 	});
 });

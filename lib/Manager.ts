@@ -41,6 +41,13 @@ export default class Manager {
 		this.#lastError = error;
 	}
 
+	public getMeta(): Uint8Array {
+		const regionCount = this.#regionCount.getUint32(0, true);
+		const offsetEntry =
+			this.#heap.buffer.byteLength - 4 - REGION_ENTRY_SIZE * regionCount;
+		return new Uint8Array(this.#heap.buffer.slice(offsetEntry));
+	}
+
 	public get regions() {
 		return this.#regions.map((r) => {
 			return {
@@ -119,7 +126,7 @@ export default class Manager {
 				const target = source + REGION_ENTRY_SIZE;
 				const region = this.#regions.splice(i, 1)[0];
 				if (sizeToMove) {
-					this.#byteWrapper.copyWithin(target, source, sizeToMove);
+					this.#byteWrapper.copyWithin(target, source, source + sizeToMove);
 					this.#byteWrapper.fill(0, source, source + REGION_ENTRY_SIZE);
 				} else {
 					// you are here because it was the last entry in the "list"
