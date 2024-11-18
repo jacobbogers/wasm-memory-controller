@@ -1,18 +1,36 @@
 {
 	"author": "",
 	"description": "",
-	"keywords": ["WebAssembly Memory", "wasm memory", "wasm memory manager"],
+	"keywords": [
+		"WebAssembly Memory",
+		"wasm memory",
+		"wasm memory manager"
+	],
 	"license": "MIT",
-	"main": "dist/index.js",
+	"main": "dist/Manager.js",
 	"name": "wasm-memory-controller",
 	"scripts": {
 		"lint": "biome check --write ./",
-		"test": "vitest run --coverage"
+		"test": "vitest run --coverage",
+		"prebuild": "node scripts/prebuild.js",
+		"build": "tsc"
 	},
+	"sideEffects": false,
+	"exports": {
+		"import": "./dist/esm/Manager.js",
+		"types": "./dist/types/Manager.d.ts"
+	},
+	"files": [
+		"dist",
+		"CHANGELOG.md",
+		"LICENSE.txt",
+		"README.md"
+	],
 	"type": "module",
 	"version": "1.0.0",
 	"devDependencies": {
 		"@biomejs/biome": "1.9.4",
+		"@types/node": "22.9.0",
 		"@vitest/coverage-v8": "2.1.5",
 		"typescript": "5.6.3",
 		"vitest": "2.1.5"

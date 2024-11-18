@@ -1,3 +1,5 @@
+// needed for some vscode environments
+/// <reference types="vitest/globals" />
 import Manager from "../Manager";
 import WasmMemoryError from "../WasmMemoryError";
 
@@ -171,8 +173,7 @@ describe("manager", () => {
 			{ id: 5, offset: 45056, len: 4096 },
 			{ id: 3, offset: 81920, len: 40960 },
 		]);
-		console.log(mm.getMeta());
-		//expect(mm.getMeta()).toEqual(fixtureSerializedMemory);
+		expect(mm.getMeta()).toEqual(fixtureSerializedMemory);
 	});
 	it.concurrent("resurrect the metainfo of a datablock", () => {
 		const heap = new WebAssembly.Memory({ initial: 2, maximum: 3 }); // 128k
