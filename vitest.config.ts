@@ -1,4 +1,4 @@
-import { defineConfig, mergeConfig, configDefaults } from "vitest/config";
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 
 export default defineConfig(
 	mergeConfig(configDefaults, {

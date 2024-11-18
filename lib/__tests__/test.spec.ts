@@ -39,6 +39,7 @@ describe("manager", () => {
 		expect(mm.getLatestError()).toBeNull();
 		const regionC = mm.claim(3, 40 * KB); // 120k
 		expect(mm.getLatestError()).toBeNull();
+		const regionD = mm.claim(2, 5 * KB); // 120k
 		//
 		//
 		{
@@ -61,6 +62,12 @@ describe("manager", () => {
 
 					offset: 81920,
 					len: 40960,
+				},
+				{
+					id: 2,
+
+					offset: 122880,
+					len: 5120,
 				},
 			]);
 		}

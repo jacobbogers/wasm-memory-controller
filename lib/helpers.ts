@@ -1,5 +1,5 @@
-import { dictionary } from "./errors";
 import type Region from "./Region";
+import { dictionary } from "./errors";
 
 export function sortRegions(a: Region, b: Region): number {
 	// higher offsets at the start

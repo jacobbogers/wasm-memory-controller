@@ -1,7 +1,7 @@
 import Region from "./Region";
 import WasmMemoryError from "./WasmMemoryError";
 import { REGION_ENTRY_SIZE } from "./constants";
-import { sortRegions, formatError } from "./helpers";
+import { formatError, sortRegions } from "./helpers";
 
 export default class Manager {
 	#heap: WebAssembly.Memory;
@@ -113,29 +113,31 @@ export default class Manager {
 		this.setLatestError(new WasmMemoryError(1, formatError(1, octetSize)));
 		return null;
 	}
-	public freeViaRegionId(id16Bit: number): null | Region {
+	public freeViaRegionId(id16Bit: number): null | Region[] {
 		const regionCount = this.#regionCount.getUint32(0, true);
+		const regions: Region[] = [];
 		for (let i = 0; i < this.#regions.length; i++) {
 			const region = this.#regions[i];
-			if (region.id === id16Bit) {
-				const sizeToMove = REGION_ENTRY_SIZE * (this.#regions.length - (i + 1));
-				const source =
-					this.#heap.buffer.byteLength -
-					4 -
-					REGION_ENTRY_SIZE * this.#regions.length;
-				const target = source + REGION_ENTRY_SIZE;
-				const region = this.#regions.splice(i, 1)[0];
-				if (sizeToMove) {
-					this.#byteWrapper.copyWithin(target, source, source + sizeToMove);
-					this.#byteWrapper.fill(0, source, source + REGION_ENTRY_SIZE);
-				} else {
-					// you are here because it was the last entry in the "list"
-					region.clearEntry();
-				}
-				this.#regionCount.setUint32(0, regionCount - 1, true);
-				return region;
+			if (region.id !== id16Bit) {
+				continue;
 			}
+			const sizeToMove = REGION_ENTRY_SIZE * (this.#regions.length - (i + 1));
+			const source =
+				this.#heap.buffer.byteLength -
+				4 -
+				REGION_ENTRY_SIZE * this.#regions.length;
+			const target = source + REGION_ENTRY_SIZE;
+			this.#regions.splice(i, 1)[0];
+			if (sizeToMove) {
+				this.#byteWrapper.copyWithin(target, source, source + sizeToMove);
+				this.#byteWrapper.fill(0, source, source + REGION_ENTRY_SIZE);
+			} else {
+				// you are here because it was the last entry in the "list"
+				region.clearEntry();
+			}
+			this.#regionCount.setUint32(0, regionCount - 1, true);
+			regions.push(region);
 		}
-		return null;
+		return regions.length ? regions : null;
 	}
 }
